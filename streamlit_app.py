@@ -4,7 +4,7 @@ import google.generativeai as genai
 # --- 1. CONFIGURATION ---
 st.set_page_config(page_title="Viral Content Converter", page_icon="🚀", layout="wide")
 
-# --- 2. FORCE DARK MODE CSS ---
+# --- 2. DARK MODE CSS ---
 st.markdown("""
     <style>
     .stApp {
@@ -52,39 +52,44 @@ if not st.session_state.authenticated:
                 st.error("❌ Incorrect Password")
     st.stop()
 
-# --- 4. SMART GENERATION LOGIC (The Fix) ---
-def smart_generate(prompt, api_key):
+# --- 4. AUTOMATIC MODEL FINDER (The Fix) ---
+def get_available_model(api_key):
     genai.configure(api_key=api_key)
-    
-    # List of models to try in order (Newest -> Oldest/Stable)
-    models_to_try = [
-        'gemini-1.5-flash',
-        'gemini-1.5-flash-latest',
-        'gemini-1.5-pro',
-        'gemini-pro' # The "Old Reliable" backup
-    ]
-    
-    last_error = ""
-    
-    for model_name in models_to_try:
-        try:
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content(prompt)
-            return response.text # If successful, return immediately
-        except Exception as e:
-            last_error = str(e)
-            continue # If fail, try the next one in the list
-            
-    return f"Error: All models failed. Last error: {last_error}"
+    try:
+        # Ask Google for all available models
+        all_models = genai.list_models()
+        # Find the first one that supports 'generateContent'
+        for m in all_models:
+            if 'generateContent' in m.supported_generation_methods:
+                # Prefer Flash or Pro if available
+                if 'flash' in m.name:
+                    return m.name
+        
+        # If no Flash found, grab ANY valid model
+        for m in all_models:
+             if 'generateContent' in m.supported_generation_methods:
+                 return m.name
+                 
+        return None
+    except Exception as e:
+        return None
 
 # --- 5. MAIN DASHBOARD ---
+st.markdown("<h1 style='text-align: center;'>🚀 YouTube to Viral Post</h1>", unsafe_allow_html=True)
+
+# Check Connection silently
+active_model = "gemini-1.5-flash" # Default fallback
+if "GOOGLE_API_KEY" in st.secrets:
+    found_model = get_available_model(st.secrets["GOOGLE_API_KEY"])
+    if found_model:
+        active_model = found_model
+
 with st.sidebar:
     st.write("Logged in as VIP")
+    st.caption(f"System: {active_model}") # Show user which model is working
     if st.button("Log Out"):
         st.session_state.authenticated = False
         st.rerun()
-
-st.markdown("<h1 style='text-align: center;'>🚀 YouTube to Viral Post</h1>", unsafe_allow_html=True)
 
 col1, col2 = st.columns([3, 2], gap="medium")
 
@@ -103,12 +108,17 @@ with col2:
         if not transcript:
             st.warning("Please paste text first.")
         else:
-            with st.spinner("Thinking..."):
-                prompt = f"Rewrite as {platform} in {tone} tone: {transcript}"
-                # Use the new Smart Generator
-                result = smart_generate(prompt, st.secrets["GOOGLE_API_KEY"])
+            try:
+                genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+                model = genai.GenerativeModel(active_model) # Use the auto-detected model
                 
-                st.markdown("---")
-                st.subheader("Result:")
-                st.code(result)
-                st.balloons()
+                with st.spinner(f"Generating with {active_model}..."):
+                    prompt = f"Rewrite as {platform} in {tone} tone: {transcript}"
+                    response = model.generate_content(prompt)
+                    st.markdown("---")
+                    st.subheader("Result:")
+                    st.code(response.text)
+                    st.balloons()
+            except Exception as e:
+                st.error(f"Deep Error: {e}")
+                st.help("If this persists, your API Key might not be active for Gemini yet.")
