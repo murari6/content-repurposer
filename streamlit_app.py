@@ -42,7 +42,7 @@ with col2:
 def generate_content(text, platform, tone, key):
     try:
         genai.configure(api_key=key)
-        model = genai.GenerativeModel('gemini-1.5-flash') # Fast & Free model
+        model = genai.GenerativeModel('gemini-1.5-flash-002') # Fast & Free model
         
         prompt = f"""
         Act as an expert social media copywriter. 
