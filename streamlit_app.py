@@ -7,7 +7,6 @@ st.set_page_config(page_title="Viral Content Converter", page_icon="🚀", layou
 # --- 2. FORCE DARK MODE CSS ---
 st.markdown("""
     <style>
-    /* 1. Main Background - Animated Dark Gradient */
     .stApp {
         background: linear-gradient(-45deg, #000000, #1e1e1e, #0f2027, #203a43);
         background-size: 400% 400%;
@@ -18,46 +17,17 @@ st.markdown("""
         50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
     }
-
-    /* 2. SIDEBAR Background - Dark Navy */
-    [data-testid="stSidebar"] {
-        background-color: #000000;
-        border-right: 1px solid #333333;
-    }
-    
-    /* 3. TEXT & HEADERS - Force White */
-    .stApp, h1, h2, h3, label, p, div, span { 
-        color: #FFFFFF !important; 
-    }
-    
-    /* 4. INPUT BOXES (Transcript & Password) - Dark Grey */
+    [data-testid="stSidebar"] { background-color: #000000; border-right: 1px solid #333333; }
+    .stApp, h1, h2, h3, label, p, div, span { color: #FFFFFF !important; }
     .stTextArea textarea, .stTextInput input {
-        background-color: #1E1E1E !important; /* Dark Grey */
-        color: #FFFFFF !important;            /* White Text */
-        border: 1px solid #444444 !important;
+        background-color: #1E1E1E !important; color: #FFFFFF !important; border: 1px solid #444444 !important;
     }
-    
-    /* 5. DROPDOWN (Format Bar) - Dark Mode Fix */
-    div[data-baseweb="select"] > div {
-        background-color: #1E1E1E !important;
-        color: white !important;
-        border: 1px solid #444444 !important;
-    }
-    /* Dropdown Options List */
-    div[data-baseweb="popover"] div {
-        background-color: #1E1E1E !important;
-        color: white !important;
-    }
-    div[data-baseweb="menu"] div {
-        color: white !important;
-    }
-
-    /* 6. BUTTONS - Neon Gradient */
+    div[data-baseweb="select"] > div { background-color: #1E1E1E !important; color: white !important; border: 1px solid #444444 !important; }
+    div[data-baseweb="popover"] div { background-color: #1E1E1E !important; color: white !important; }
+    div[data-baseweb="menu"] div { color: white !important; }
     .stButton > button {
         background: linear-gradient(90deg, #00C9FF, #92FE9D);
-        color: black !important;
-        font-weight: bold;
-        border: none;
+        color: black !important; font-weight: bold; border: none;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -82,7 +52,32 @@ if not st.session_state.authenticated:
                 st.error("❌ Incorrect Password")
     st.stop()
 
-# --- 4. MAIN DASHBOARD ---
+# --- 4. SMART GENERATION LOGIC (The Fix) ---
+def smart_generate(prompt, api_key):
+    genai.configure(api_key=api_key)
+    
+    # List of models to try in order (Newest -> Oldest/Stable)
+    models_to_try = [
+        'gemini-1.5-flash',
+        'gemini-1.5-flash-latest',
+        'gemini-1.5-pro',
+        'gemini-pro' # The "Old Reliable" backup
+    ]
+    
+    last_error = ""
+    
+    for model_name in models_to_try:
+        try:
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content(prompt)
+            return response.text # If successful, return immediately
+        except Exception as e:
+            last_error = str(e)
+            continue # If fail, try the next one in the list
+            
+    return f"Error: All models failed. Last error: {last_error}"
+
+# --- 5. MAIN DASHBOARD ---
 with st.sidebar:
     st.write("Logged in as VIP")
     if st.button("Log Out"):
@@ -108,15 +103,12 @@ with col2:
         if not transcript:
             st.warning("Please paste text first.")
         else:
-            try:
-                genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                with st.spinner("Thinking..."):
-                    prompt = f"Rewrite as {platform} in {tone} tone: {transcript}"
-                    response = model.generate_content(prompt)
-                    st.markdown("---")
-                    st.subheader("Result:")
-                    st.code(response.text)
-                    st.balloons()
-            except Exception as e:
-                st.error(f"Error: {e}")
+            with st.spinner("Thinking..."):
+                prompt = f"Rewrite as {platform} in {tone} tone: {transcript}"
+                # Use the new Smart Generator
+                result = smart_generate(prompt, st.secrets["GOOGLE_API_KEY"])
+                
+                st.markdown("---")
+                st.subheader("Result:")
+                st.code(result)
+                st.balloons()
