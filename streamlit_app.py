@@ -4,8 +4,8 @@ import google.generativeai as genai
 # --- 1. App Config ---
 st.set_page_config(page_title="Viral Content Repurposer", page_icon="🚀")
 
-# --- 🔒 LOGIN SYSTEM (The Money Maker) ---
-# Change "money2025" to whatever password you want to sell
+# --- 🔒 LOGIN SYSTEM ---
+# The password to sell access
 ACCESS_PASSWORD = "money2025" 
 
 with st.sidebar:
@@ -13,20 +13,14 @@ with st.sidebar:
     user_pass = st.text_input("Enter Access Password", type="password")
     
     if user_pass != ACCESS_PASSWORD:
-        st.warning("Incorrect or missing password.")
-        st.stop()  # 🛑 THIS STOPS THE APP HERE IF PASSWORD IS WRONG
+        st.warning("Please log in to use the tool.")
+        st.stop()  # 🛑 Stops here if wrong password
     
     st.success("Access Granted! ✅")
-    st.divider()
-    
-    # --- Settings (Only visible after login) ---
-    st.header("🔑 Settings")
-    api_key = st.text_input("Enter Gemini API Key", type="password")
-    st.info("Using Model: gemini-2.5-flash")
 
-# --- 2. Main Interface (Hidden until logged in) ---
+# --- 2. Main Interface ---
 st.title("🚀 YouTube to Viral Post Converter")
-st.caption("Powered by Gemini 2.5 Flash")
+st.caption("Professional Edition")
 
 col1, col2 = st.columns(2)
 
@@ -44,11 +38,14 @@ with col2:
     )
     tone = st.select_slider("Select Tone:", options=["Funny", "Casual", "Professional"])
 
-# --- 3. AI Logic ---
-def generate_content(text, platform, tone, key):
-    genai.configure(api_key=key)
-    # FORCE GEMINI 2.5
-    model = genai.GenerativeModel('gemini-2.5-flash') 
+# --- 3. AI Logic (Hidden Key) ---
+def generate_content(text, platform, tone):
+    # GRAB KEY FROM SECRETS (Hidden from user)
+    api_key = st.secrets["GOOGLE_API_KEY"]
+    genai.configure(api_key=api_key)
+    
+    # Using the stable model
+    model = genai.GenerativeModel('gemini-1.5-flash') 
     
     prompt = f"""
     Act as an expert copywriter.
@@ -62,14 +59,12 @@ def generate_content(text, platform, tone, key):
 
 # --- 4. Generate Button ---
 if st.button("✨ Generate Magic Content", type="primary"):
-    if not api_key:
-        st.error("Please enter your API Key in the sidebar.")
-    elif not transcript:
-        st.warning("Please paste a transcript.")
+    if not transcript:
+        st.warning("Please paste a transcript first.")
     else:
-        with st.spinner("Gemini 2.5 is thinking..."):
+        with st.spinner("Generating content..."):
             try:
-                result = generate_content(transcript, platform, tone, api_key)
+                result = generate_content(transcript, platform, tone)
                 st.subheader("Your Content:")
                 st.markdown(result)
             except Exception as e:
