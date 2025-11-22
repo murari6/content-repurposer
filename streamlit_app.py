@@ -4,28 +4,13 @@ import google.generativeai as genai
 # --- 1. App Config ---
 st.set_page_config(page_title="Viral Content Repurposer", page_icon="🚀")
 st.title("🚀 YouTube to Viral Post Converter")
+st.caption("Powered by Gemini 2.5 Flash")
 
-# --- 2. Sidebar: API Key & Model Selector ---
+# --- 2. Sidebar: API Key Only ---
 with st.sidebar:
     st.header("🔑 Settings")
     api_key = st.text_input("Enter Gemini API Key", type="password")
-    
-    # Smart Model Selector
-    selected_model = "gemini-2.5-flash" # Default fallback
-    if api_key:
-        try:
-            genai.configure(api_key=api_key)
-            # Auto-fetch available models
-            models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-            # Filter for 'flash' or 'pro' models which are best for text
-            chat_models = [m for m in models if 'flash' in m or 'pro' in m]
-            if chat_models:
-                selected_model = st.selectbox("Select AI Model:", chat_models, index=0)
-            else:
-                st.error("No chat models found. Check your API Key permissions.")
-        except Exception as e:
-            st.warning(f"Could not list models: {e}")
-            st.info("Using default model: gemini-2.5-flash")
+    st.info("Using Model: gemini-2.5-flash")
 
 # --- 3. Main Interface ---
 col1, col2 = st.columns(2)
@@ -44,10 +29,13 @@ with col2:
     )
     tone = st.select_slider("Select Tone:", options=["Funny", "Casual", "Professional"])
 
-# --- 4. AI Logic ---
-def generate_content(text, platform, tone, model_name):
-    # Use the selected model from sidebar
-    model = genai.GenerativeModel(model_name)
+# --- 4. AI Logic (Hardcoded to 2.5) ---
+def generate_content(text, platform, tone, key):
+    genai.configure(api_key=key)
+    
+    # FORCE GEMINI 2.5 FLASH
+    # If this fails, check if your API key has access to 2.5 yet.
+    model = genai.GenerativeModel('gemini-2.5-flash') 
     
     prompt = f"""
     Act as an expert copywriter.
@@ -66,13 +54,11 @@ if st.button("✨ Generate Magic Content", type="primary"):
     elif not transcript:
         st.warning("Please paste a transcript.")
     else:
-        with st.spinner("AI is working..."):
+        with st.spinner("Gemini 2.5 is thinking..."):
             try:
-                # Clean model name (remove 'models/' prefix if present)
-                clean_model_name = selected_model.replace("models/", "")
-                result = generate_content(transcript, platform, tone, clean_model_name)
+                result = generate_content(transcript, platform, tone, api_key)
                 st.subheader("Your Content:")
                 st.markdown(result)
             except Exception as e:
                 st.error(f"Error: {str(e)}")
-                st.help("Try selecting a different model in the sidebar.")
+                st.error("Note: If you get a 404, 'gemini-2.5-flash' might not be enabled for your key yet. Try changing the code to 'gemini-1.5-flash' as a backup.")
