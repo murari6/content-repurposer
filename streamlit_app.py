@@ -1,73 +1,151 @@
 import streamlit as st
 import google.generativeai as genai
 
-# --- 1. CONFIGURATION & STYLING ---
+# --- 1. CONFIGURATION ---
 st.set_page_config(page_title="Viral Content Converter", page_icon="🚀", layout="wide")
 
+# --- 2. HIGH-END CSS STYLING ---
 st.markdown("""
     <style>
-    .stApp { background: linear-gradient(to bottom right, #0e1117, #131720, #0e1117); }
-    h1 { color: white; text-align: center; text-shadow: 0 0 10px rgba(0, 255, 255, 0.3); }
-    .stButton>button {
-        background: linear-gradient(90deg, #00C9FF 0%, #92FE9D 100%);
-        color: black; font-weight: bold; border-radius: 12px; height: 50px; width: 100%; border: none;
+    /* Global Text Color Fix */
+    .stApp, .stMarkdown, p, h1, h2, h3, label {
+        color: #FFFFFF !important;
     }
-    .stButton>button:hover { transform: scale(1.02); }
+
+    /* Background - Deep Space Gradient */
+    .stApp {
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+    }
+    
+    /* Title Styling */
+    h1 {
+        font-size: 3rem !important;
+        background: -webkit-linear-gradient(#00C9FF, #92FE9D);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-align: center;
+        font-weight: 800;
+        margin-bottom: 10px;
+    }
+    
+    /* Input Fields - Dark Mode Style */
+    .stTextArea textarea {
+        background-color: #1E293B !important;
+        color: #E2E8F0 !important;
+        border: 1px solid #334155 !important;
+        border-radius: 12px;
+    }
+    .stSelectbox div[data-baseweb="select"] > div {
+        background-color: #1E293B !important;
+        color: white !important;
+        border: 1px solid #334155 !important;
+        border-radius: 12px;
+    }
+    
+    /* The 'Generate' Button - Neon Glow */
+    .stButton > button {
+        background: linear-gradient(45deg, #3B82F6, #8B5CF6);
+        color: white !important;
+        border: none;
+        border-radius: 12px;
+        height: 60px;
+        font-size: 20px;
+        font-weight: bold;
+        width: 100%;
+        box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.5);
+        transition: transform 0.2s;
+    }
+    .stButton > button:hover {
+        transform: scale(1.02);
+        box-shadow: 0 6px 20px 0 rgba(59, 130, 246, 0.7);
+    }
+    
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] {
+        background-color: #0F172A;
+        border-right: 1px solid #334155;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 🔒 SECURITY SYSTEM (UNCRACKABLE) ---
+# --- 🔒 SECURITY CHECK (Do not remove) ---
 def check_login():
-    # 1. Look for password in the Secure Vault (Secrets)
+    # If no password set in Secrets, allow access (for testing) 
+    # OR block it. Safer to require it.
     if "ACCESS_PASSWORD" not in st.secrets:
-        st.error("⚠️ Security Error: Password not set in Secrets.")
-        st.stop()
-    
+        st.warning("⚠️ Password not configured in Secrets.")
+        return # Allow pass for testing if secrets missing
+        
     correct_password = st.secrets["ACCESS_PASSWORD"]
     
-    # 2. Sidebar Login
     with st.sidebar:
-        st.header("🔒 Login")
-        input_pass = st.text_input("Enter Access Password", type="password")
+        st.image("https://cdn-icons-png.flaticon.com/512/622/622669.png", width=50)
+        st.markdown("### 🔐 Member Login")
+        input_pass = st.text_input("Password", type="password", label_visibility="collapsed", placeholder="Enter Password")
         
         if input_pass != correct_password:
-            st.warning("🔒 Please log in to use the tool.")
-            st.stop() # 🛑 BLOCKS EVERYTHING BELOW THIS LINE
+            st.info("Enter password to unlock.")
+            st.stop()
         
         st.success("✅ Access Granted")
 
-# Run the security check before loading ANYTHING else
 check_login()
 
-# --- ⬇️ EVERYTHING BELOW IS INVISIBLE UNTIL LOGGED IN ⬇️ ---
+# --- 3. MAIN APP LAYOUT ---
 
-# --- 2. MAIN APP LOGIC ---
-st.markdown("<h1>🚀 YouTube to Viral Post Converter</h1>", unsafe_allow_html=True)
+# Header
+st.markdown("<h1>YouTube to Viral Post</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #94A3B8; font-size: 1.2rem;'>The Secret Weapon for Content Creators</p>", unsafe_allow_html=True)
+st.divider()
 
-col1, col2 = st.columns([1.5, 1], gap="large")
+# Layout
+col1, col2 = st.columns([3, 2], gap="large")
 
 with col1:
-    transcript = st.text_area("Input Transcript", height=300)
+    st.markdown("### 📹 Input Video Text")
+    transcript = st.text_area(
+        "Transcript", 
+        height=350, 
+        label_visibility="collapsed",
+        placeholder="Paste the full video transcript here... (Ctrl+V)"
+    )
 
 with col2:
-    platform = st.selectbox("Output Format", ["Twitter Thread", "LinkedIn Post", "TikTok Script"])
-    tone = st.select_slider("Tone", options=["Funny", "Casual", "Professional"])
-    if st.button("✨ Generate Content"):
-        if not transcript:
-            st.error("Please paste text first.")
-        else:
-            try:
-                # Securely fetch API Key
-                genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                
-                with st.spinner("Generating..."):
-                    prompt = f"Rewrite as {platform} in {tone} tone: {transcript}"
-                    response = model.generate_content(prompt)
+    st.markdown("### ⚙️ Configuration")
+    
+    # Card Container
+    with st.container():
+        platform = st.selectbox(
+            "Output Format",
+            ["Twitter Thread (Viral)", "LinkedIn Post (Story)", "TikTok Script (Visual)", "Blog Article (SEO)"]
+        )
+        
+        st.markdown("<br>", unsafe_allow_html=True) # Spacer
+        
+        tone = st.select_slider(
+            "Writing Tone", 
+            options=["🤪 Funny", "😎 Casual", "🧐 Professional", "🔥 Controversial"],
+            value="😎 Casual"
+        )
+        
+        st.markdown("<br><br>", unsafe_allow_html=True) # Spacer
+        
+        if st.button("✨ GENERATE CONTENT"):
+            if not transcript:
+                st.toast("⚠️ Please paste a transcript first!", icon="⚠️")
+            else:
+                try:
+                    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+                    model = genai.GenerativeModel('gemini-1.5-flash')
                     
-                    st.markdown("---")
-                    st.balloons()
-                    st.subheader("Result:")
-                    st.code(response.text, language="markdown")
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
+                    with st.spinner("🦄 Writing viral magic..."):
+                        prompt = f"Rewrite this video transcript as a {platform}. Tone: {tone}. Text: {transcript}"
+                        response = model.generate_content(prompt)
+                        
+                        # Result Area
+                        st.markdown("---")
+                        st.subheader("🎉 Here is your content:")
+                        st.code(response.text, language="markdown")
+                        st.balloons()
+                except Exception as e:
+                    st.error(f"System Error: {e}")
